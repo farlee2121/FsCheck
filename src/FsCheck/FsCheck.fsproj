@@ -2,8 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>FsCheck</AssemblyName>
-    <TargetFrameworks>net452;netstandard2.0;netstandard1.6;netstandard1.0</TargetFrameworks>
-    <AssetTargetFallback>$(AssetTargetFallback);portable-net45+netcore45+wpa81+wp8</AssetTargetFallback>
+    <TargetFrameworks>net452;netstandard2.0;netstandard1.6</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
