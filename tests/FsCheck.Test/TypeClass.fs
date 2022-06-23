@@ -138,3 +138,16 @@ module TypeClass =
 
         let instance = discovered.InstanceFor<string,ITypeClassUnderTest<string>>()
         43 =! instance.GetSomething
+
+
+    [<Fact>]
+    let ``MergeFactory should instantiate primitive type`` () =
+        let instance = 
+            TypeClass<ITypeClassUnderTest<_>>
+                .New()
+                .MergeMethod(fun () -> 
+                    { new ITypeClassUnderTest<int> with
+                    override __.GetSomething = 1 })
+                .InstanceFor<int,ITypeClassUnderTest<int>>()
+
+        1 =! instance.GetSomething

@@ -182,6 +182,20 @@ module internal TypeClass =
             let newTC = this.Discover<'T>(onlyPublic, instance)
             this.Merge(newTC)
 
+        member this.MergeMethod(factory: System.Func<'TypeClass>) = 
+            let typeClass = this.Class
+            let toRegistryPair (m:MethodInfo) =
+                match m.ReturnType with
+                | GenericTypeDef typeClass args when args.Length <> 1 -> 
+                    failwithf "Typeclasses must have exactly one generic parameter. Typeclass %A has %i" typeClass args.Length
+                | GenericTypeDef typeClass args ->
+                    let instance = args.[0]
+                    (InstanceKind.FromType instance,m)
+                | _ -> failwith "Lambda did not return a compatible type for this type class"
+            
+            let updatedMap = this.InstancesMap.Add(toRegistryPair factory.Method)
+            new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
+
         ///Compares this TypeClass with the given TypeClass. Returns, respectively, the new instances, overridden instances,
         ///new array instances, overridden array instances, new catch all or overridden catchall introduced by the other TypeClass.
         member x.Compare (other:TypeClass<'TypeClass>) =
