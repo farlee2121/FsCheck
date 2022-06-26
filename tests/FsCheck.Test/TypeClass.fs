@@ -139,15 +139,32 @@ module TypeClass =
         let instance = discovered.InstanceFor<string,ITypeClassUnderTest<string>>()
         43 =! instance.GetSomething
 
+    
+    module MergeFactory = 
 
-    [<Fact>]
-    let ``MergeFactory should instantiate primitive type`` () =
-        let instance = 
-            TypeClass<ITypeClassUnderTest<_>>
-                .New()
-                .MergeMethod(fun () -> 
-                    { new ITypeClassUnderTest<int> with
-                    override __.GetSomething = 1 })
-                .InstanceFor<int,ITypeClassUnderTest<int>>()
+        module MethodInfo =
+            let from0 (f:unit->'b) = (Func<'b>(f)).Method
+            let from1 (f:'a->'b) = (Func<'a,'b>(f)).Method
 
-        1 =! instance.GetSomething
+        [<Fact>]
+        let ``should instantiate primitive type`` () =
+            let instance = 
+                TypeClass<ITypeClassUnderTest<_>>
+                    .New()
+                    .MergeFactory(fun () -> PrimitiveInstance.Int())
+                    .InstanceFor<int,ITypeClassUnderTest<int>>()
+
+            1 =! instance.GetSomething
+
+        [<Fact>]
+        let ``should inject config parameters``() =
+            let discovered = 
+                TypeClass<ITypeClassUnderTest<_>>
+                    .New(injectParameters=true)
+                    .Discover(true, typeof<PrimitiveInstance>, newInjectedConfigs=[|Config 42|])
+                    .MergeFactoryWithParameters(fun config -> InjectedConfigInstance.String config)
+
+            2 =! discovered.Instances.Count
+
+            let instance = discovered.InstanceFor<string,ITypeClassUnderTest<string>>()
+            43 =! instance.GetSomething

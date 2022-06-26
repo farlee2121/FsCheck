@@ -182,7 +182,13 @@ module internal TypeClass =
             let newTC = this.Discover<'T>(onlyPublic, instance)
             this.Merge(newTC)
 
-        member this.MergeMethod(factory: System.Func<'TypeClass>) = 
+        member this.MergeFactory(factory: Func<'a>) =
+            this.MergeStaticFactory(factory.Method)
+
+        member this.MergeFactoryWithParameters(factory: Func<'a,'b>) =
+            this.MergeStaticFactory(factory.Method)
+
+        member private this.MergeStaticFactory(factory: MethodInfo) = 
             let typeClass = this.Class
             let toRegistryPair (m:MethodInfo) =
                 match m.ReturnType with
@@ -193,8 +199,9 @@ module internal TypeClass =
                     (InstanceKind.FromType instance,m)
                 | _ -> failwith "Lambda did not return a compatible type for this type class"
             
-            let updatedMap = this.InstancesMap.Add(toRegistryPair factory.Method)
+            let updatedMap = this.InstancesMap.Add(toRegistryPair factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
+            
 
         ///Compares this TypeClass with the given TypeClass. Returns, respectively, the new instances, overridden instances,
         ///new array instances, overridden array instances, new catch all or overridden catchall introduced by the other TypeClass.
