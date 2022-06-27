@@ -157,6 +157,19 @@ module TypeClass =
             1 =! instance.GetSomething
 
         [<Fact>]
+        let ``should inject typeclass parameters (fully-specified types only)``() =
+            let discovered = 
+                TypeClass<ITypeClassUnderTest<obj>>
+                    .New(injectParameters=true)
+                    .MergeFactory(fun () -> InjectedInstance.Int32())
+                    .MergeFactoryWithParameters(fun (arb:ITypeClassUnderTest<int>) -> InjectedInstance.ListOf<int> arb)
+
+            2 =! discovered.Instances.Count
+
+            let instance = discovered.InstanceFor<list<int>,ITypeClassUnderTest<list<int>>>()
+            2 =! instance.GetSomething
+
+        [<Fact>]
         let ``should inject config parameters``() =
             let discovered = 
                 TypeClass<ITypeClassUnderTest<_>>
