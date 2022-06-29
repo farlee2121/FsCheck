@@ -72,6 +72,12 @@ module internal TypeClass =
             Some (InstanceKind.FromType instance, inv)
         | _ -> None
 
+    type ParameterErrors = 
+        | NoneAllowed
+        | NotCreatable of ParameterInfo array
+
+    module Result = 
+        let isOk = function | Ok _ -> true | _ -> false
 
     let private validateParameters (typeClass:Type) (injectParameters: bool) injectedConfigTypes (meth:MethodInfo) =
         let isUsableMethodArgumentType argumentType =
@@ -86,10 +92,16 @@ module internal TypeClass =
                 false
 
         if injectParameters then
-            meth.GetParameters()
-            |> Array.forall (fun p -> isUsableMethodArgumentType p.ParameterType)
+            let invalidParameters = 
+                meth.GetParameters()
+                |> Array.filter (fun p -> not(isUsableMethodArgumentType p.ParameterType))
+            if Array.isEmpty invalidParameters
+            then Ok ()
+            else Error  (NotCreatable invalidParameters)
         else
-            meth.GetParameters().Length = 0
+            if meth.GetParameters().Length = 0
+            then Ok ()
+            else Error (NoneAllowed)
     
     
     //returns a dictionary of generic types to methodinfo, a catch all, and array types in a list by rank
@@ -102,9 +114,10 @@ module internal TypeClass =
         let filterVisibility (meth:MethodInfo) =
              meth.IsPublic || not onlyPublic
 
+        let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
         let filterParameters (meth:MethodInfo) = 
-            let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
             validateParameters typeClass injectParameters injectedConfigTypes meth
+            |> Result.isOk
 
         let addMethod acc (m:MethodInfo) =
             match toRegistryPair typeClass { Target = null; Method = m } with
@@ -211,10 +224,18 @@ module internal TypeClass =
                 | Some registration -> registration
                 | None -> invalidArg "factory" "Factory did not return a compatible type for this type class"
 
-            // TODO: get specific arguments that aren't supported, specific error types (no parameters allowed, certain ones not allowed)
+            let throwParameterError err = 
+                match err with
+                | NoneAllowed -> invalidArg "factory" "Typeclass does not allow factories with parameters"
+                | NotCreatable invalidParams -> 
+                    let formatParam (pi:ParameterInfo) = sprintf "%s %s" pi.ParameterType.Name pi.Name
+                    let paramString = invalidParams |> Array.map formatParam |> String.concat "; "
+                    invalidArg "factory" (sprintf "Typeclass cannot create values for the factory's parameters. Invalid parameters: [%s]" paramString)
+
             let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
-            if not (validateParameters this.Class injectParameters injectedConfigTypes factory.Method)
-            then invalidArg "factory" "Factory expected unsupported arguments"
+            match validateParameters this.Class injectParameters injectedConfigTypes factory.Method with
+            | Error err -> throwParameterError err
+            | Ok _ -> ()
 
             let updatedMap = this.InstancesMap.Add(toRegistryPair' factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
