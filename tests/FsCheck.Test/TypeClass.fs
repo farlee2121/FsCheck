@@ -157,7 +157,7 @@ module TypeClass =
                 TypeClass<ITypeClassUnderTest<obj>>
                     .New(injectParameters=true)
                     .MergeFactory(fun () -> InjectedInstance.Int32())
-                    .MergeFactoryWithParameters(fun (arb:ITypeClassUnderTest<int>) -> InjectedInstance.ListOf<int> arb)
+                    .MergeFactory(fun (arb:ITypeClassUnderTest<int>) -> InjectedInstance.ListOf<int> arb)
 
             2 =! discovered.Instances.Count
 
@@ -170,7 +170,7 @@ module TypeClass =
                 TypeClass<ITypeClassUnderTest<_>>
                     .New(injectParameters=true)
                     .Discover(true, typeof<PrimitiveInstance>, newInjectedConfigs=[|Config 42|])
-                    .MergeFactoryWithParameters(fun config -> InjectedConfigInstance.String config)
+                    .MergeFactory(fun config -> InjectedConfigInstance.String config)
 
             2 =! discovered.Instances.Count
 
@@ -218,7 +218,7 @@ module TypeClass =
             raises<ArgumentException> <| fun () ->
                 TypeClass<int list>
                     .New()
-                    .MergeFactoryWithParameters(fun (i:int) -> [i])
+                    .MergeFactory(fun (i:int) -> [i])
                     |> ignore
 
             

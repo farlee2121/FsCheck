@@ -212,13 +212,14 @@ module internal TypeClass =
             let newTC = this.Discover<'T>(onlyPublic, instance)
             this.Merge(newTC)
 
-        member this.MergeFactory(factory: Func<'a>) =
-            this.MergeFactory({Method = factory.Method; Target = factory.Target })
+        member this.MergeFactory(factory: Func<'a,'b>) =
+            match box factory with
+            | :? Func<unit, 'b> as f -> 
+                let factory = Func<'b>(f.Invoke)
+                this.MergeFactory({Method = factory.Method; Target = factory.Target })
+            | _ -> this.MergeFactory({Method = factory.Method; Target = factory.Target }) 
 
-        member this.MergeFactoryWithParameters(factory: Func<'a,'b>) =
-            this.MergeFactory({Method = factory.Method; Target = factory.Target })
-
-        member private this.MergeFactory(factory: InvocationData) = 
+        member internal this.MergeFactory(factory: InvocationData) = 
             let toRegistryPair' (inv: InvocationData) =
                 match toRegistryPair this.Class inv with
                 | Some registration -> registration
