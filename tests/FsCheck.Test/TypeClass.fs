@@ -189,4 +189,28 @@ module TypeClass =
                     .InstanceFor<int,ITypeClassUnderTest<int>>()
 
             context =! instance.GetSomething
+
+
+        let raises<'T when 'T :> Exception> (f:unit->unit) =
+            // Unquote doesn't support the expression I needed to evaluate
+            let didThrow = 
+                try 
+                    f()
+                    false
+                with 
+                | :? 'T -> true
+                | e -> failwithf "Expected %s, got %A" typeof<'T>.Name e
+
+            if not didThrow then failwithf "Expected exception %s, but no exception was thrown" typeof<'T>.Name
+
+
+
+        [<Fact>]
+        let ``should error if factory returns incompatible type`` () = 
+            raises<ArgumentException> <| fun () ->
+                TypeClass<int list>
+                    .New()
+                    .MergeFactory(fun () -> 5)
+                    |> ignore
+
             

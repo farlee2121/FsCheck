@@ -202,7 +202,7 @@ module internal TypeClass =
             let toRegistryPair' (inv: InvocationData) =
                 match toRegistryPair this.Class inv with
                 | Some registration -> registration
-                | None -> failwith "Lambda did not return a compatible type for this type class"
+                | None -> invalidArg "factory" "Factory did not return a compatible type for this type class"
             
             let updatedMap = this.InstancesMap.Add(toRegistryPair' factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
