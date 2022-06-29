@@ -213,4 +213,12 @@ module TypeClass =
                     .MergeFactory(fun () -> 5)
                     |> ignore
 
+        [<Fact>]
+        let ``should error if factory requires unavailable parameters`` () = 
+            raises<ArgumentException> <| fun () ->
+                TypeClass<int list>
+                    .New()
+                    .MergeFactoryWithParameters(fun (i:int) -> [i])
+                    |> ignore
+
             

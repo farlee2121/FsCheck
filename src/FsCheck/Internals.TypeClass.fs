@@ -71,20 +71,11 @@ module internal TypeClass =
             let instance = args.[0]
             Some (InstanceKind.FromType instance, inv)
         | _ -> None
-    
-    //returns a dictionary of generic types to methodinfo, a catch all, and array types in a list by rank
-    let private findInstances (typeClass:Type) onlyPublic injectParameters injectedConfigs instancesType (instance: _ option) = 
-        let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
-        let filterInstanceOrStatic (meth:MethodInfo) =
-            if instance.IsSome then
-                not meth.IsStatic
-            else
-                meth.IsStatic
-        let filterVisibility (meth:MethodInfo) =
-             meth.IsPublic || not onlyPublic
 
-        let isUsableMethodArgumentType t =
-            match t with
+
+    let private validateParameters (typeClass:Type) (injectParameters: bool) injectedConfigTypes (meth:MethodInfo) =
+        let isUsableMethodArgumentType argumentType =
+            match argumentType with
             | GenericTypeDef typeClass args when args.Length <> 1 -> 
                 failwithf "Typeclasses must have exactly one generic parameter. Typeclass %A has %i" typeClass args.Length
             | GenericTypeDef typeClass _  ->
@@ -93,12 +84,28 @@ module internal TypeClass =
                 true
             | _ ->
                 false
-        let filterParameters (meth:MethodInfo) =
-            if injectParameters then
-                meth.GetParameters()
-                |> Array.forall (fun p -> isUsableMethodArgumentType p.ParameterType)
+
+        if injectParameters then
+            meth.GetParameters()
+            |> Array.forall (fun p -> isUsableMethodArgumentType p.ParameterType)
+        else
+            meth.GetParameters().Length = 0
+    
+    
+    //returns a dictionary of generic types to methodinfo, a catch all, and array types in a list by rank
+    let private findInstances (typeClass:Type) onlyPublic injectParameters injectedConfigs instancesType (instance: _ option) = 
+        let filterInstanceOrStatic (meth:MethodInfo) =
+            if instance.IsSome then
+                not meth.IsStatic
             else
-                meth.GetParameters().Length = 0
+                meth.IsStatic
+        let filterVisibility (meth:MethodInfo) =
+             meth.IsPublic || not onlyPublic
+
+        let filterParameters (meth:MethodInfo) = 
+            let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
+            validateParameters typeClass injectParameters injectedConfigTypes meth
+
         let addMethod acc (m:MethodInfo) =
             match toRegistryPair typeClass { Target = null; Method = m } with
             | Some registration -> registration :: acc
@@ -203,7 +210,12 @@ module internal TypeClass =
                 match toRegistryPair this.Class inv with
                 | Some registration -> registration
                 | None -> invalidArg "factory" "Factory did not return a compatible type for this type class"
-            
+
+            // TODO: get specific arguments that aren't supported, specific error types (no parameters allowed, certain ones not allowed)
+            let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
+            if not (validateParameters this.Class injectParameters injectedConfigTypes factory.Method)
+            then invalidArg "factory" "Factory expected unsupported arguments"
+
             let updatedMap = this.InstancesMap.Add(toRegistryPair' factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
             
