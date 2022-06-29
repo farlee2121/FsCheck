@@ -62,6 +62,15 @@ module internal TypeClass =
         #else
         upcast t.GetMethods(BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.FlattenHierarchy ||| BindingFlags.NonPublic ||| BindingFlags.Instance)
         #endif
+
+    let private toRegistryPair typeClass (inv: InvocationData) =
+        match inv.Method.ReturnType with
+        | GenericTypeDef typeClass args when args.Length <> 1 -> 
+            failwithf "Typeclasses must have exactly one generic parameter. Typeclass %A has %i" typeClass args.Length
+        | GenericTypeDef typeClass args ->
+            let instance = args.[0]
+            Some (InstanceKind.FromType instance, inv)
+        | _ -> None
     
     //returns a dictionary of generic types to methodinfo, a catch all, and array types in a list by rank
     let private findInstances (typeClass:Type) onlyPublic injectParameters injectedConfigs instancesType (instance: _ option) = 
@@ -91,13 +100,9 @@ module internal TypeClass =
             else
                 meth.GetParameters().Length = 0
         let addMethod acc (m:MethodInfo) =
-            match m.ReturnType with
-            | GenericTypeDef typeClass args when args.Length <> 1 -> 
-                failwithf "Typeclasses must have exactly one generic parameter. Typeclass %A has %i" typeClass args.Length
-            | GenericTypeDef typeClass args ->
-                let instance = args.[0]
-                (InstanceKind.FromType instance, {Target = null; Method = m}) :: acc
-            | _ -> acc
+            match toRegistryPair typeClass { Target = null; Method = m } with
+            | Some registration -> registration :: acc
+            | None -> acc
         let addMethods (t:Type) =
             t
             |> getMethods
@@ -194,17 +199,12 @@ module internal TypeClass =
             this.MergeFactory({Method = factory.Method; Target = factory.Target })
 
         member private this.MergeFactory(factory: InvocationData) = 
-            let typeClass = this.Class
-            let toRegistryPair (inv: InvocationData) =
-                match inv.Method.ReturnType with
-                | GenericTypeDef typeClass args when args.Length <> 1 -> 
-                    failwithf "Typeclasses must have exactly one generic parameter. Typeclass %A has %i" typeClass args.Length
-                | GenericTypeDef typeClass args ->
-                    let instance = args.[0]
-                    (InstanceKind.FromType instance, factory)
-                | _ -> failwith "Lambda did not return a compatible type for this type class"
+            let toRegistryPair' (inv: InvocationData) =
+                match toRegistryPair this.Class inv with
+                | Some registration -> registration
+                | None -> failwith "Lambda did not return a compatible type for this type class"
             
-            let updatedMap = this.InstancesMap.Add(toRegistryPair factory)
+            let updatedMap = this.InstancesMap.Add(toRegistryPair' factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
             
 
