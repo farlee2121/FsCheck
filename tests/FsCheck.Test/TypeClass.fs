@@ -141,11 +141,6 @@ module TypeClass =
 
     
     module MergeFactory = 
-
-        module MethodInfo =
-            let from0 (f:unit->'b) = (Func<'b>(f)).Method
-            let from1 (f:'a->'b) = (Func<'a,'b>(f)).Method
-
         [<Fact>]
         let ``should instantiate primitive type`` () =
             let instance = 
@@ -181,3 +176,17 @@ module TypeClass =
 
             let instance = discovered.InstanceFor<string,ITypeClassUnderTest<string>>()
             43 =! instance.GetSomething
+
+        [<Fact>]
+        let ``should handle factories that require context`` () = 
+            let context = (System.Random()).Next()
+            let instance = 
+                TypeClass<ITypeClassUnderTest<_>>
+                    .New()
+                    .MergeFactory(fun () -> { 
+                        new ITypeClassUnderTest<int> with
+                            override __.GetSomething = context })
+                    .InstanceFor<int,ITypeClassUnderTest<int>>()
+
+            context =! instance.GetSomething
+            
