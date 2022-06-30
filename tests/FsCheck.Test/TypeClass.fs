@@ -190,6 +190,20 @@ module TypeClass =
 
             context =! instance.GetSomething
 
+        [<Fact>]
+        let ``should override existing factories of same type`` () = 
+            let original = PrimitiveInstance.Int()
+            let expected = { 
+                        new ITypeClassUnderTest<int> with
+                            override __.GetSomething = original.GetSomething + 2 }
+            let instance = 
+                TypeClass<ITypeClassUnderTest<_>>
+                    .New()
+                    .MergeFactory(fun () -> original)
+                    .MergeFactory(fun () -> expected)
+                    .InstanceFor<int,ITypeClassUnderTest<int>>()
+
+            expected.GetSomething =! instance.GetSomething
 
         let raises<'T when 'T :> Exception> (f:unit->unit) =
             // Unquote doesn't support the expression I needed to evaluate
