@@ -23,7 +23,7 @@ type internal ArbMap private (init: ArbMapInit) as this=
     
     let finder = 
         match init with
-        | FromTypeClass tc -> tc
+        | FromTypeClass tc -> tc.Merge(TypeClass.TypeClass(injectedConfigs = [| this |]))
         | FromDiscover (typ, existingMap) -> 
             let finder =
                 match existingMap with
