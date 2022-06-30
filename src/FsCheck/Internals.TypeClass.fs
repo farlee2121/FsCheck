@@ -235,12 +235,14 @@ module internal TypeClass =
                     let formatParam (pi:ParameterInfo) = sprintf "%s %s" pi.ParameterType.Name pi.Name
                     let paramString = invalidParams |> Array.map formatParam |> String.concat "; "
                     invalidArg "factory" (sprintf "Typeclass cannot create values for the factory's parameters. Invalid parameters: [%s]" paramString)
+            let errorIfParametersUnsupported method =
+                let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
+                match validateParameters this.Class injectParameters injectedConfigTypes factory.Method with
+                | Error err -> throwParameterError err
+                | Ok _ -> ()
 
-            let injectedConfigTypes = injectedConfigs |> Array.map (fun e -> e.GetType())
-            match validateParameters this.Class injectParameters injectedConfigTypes factory.Method with
-            | Error err -> throwParameterError err
-            | Ok _ -> ()
 
+            errorIfParametersUnsupported factory.Method
             let updatedMap = this.InstancesMap.Add(toRegistryPair' factory)
             new TypeClass<'TypeClass>(updatedMap, injectParameters, injectedConfigs)
             
