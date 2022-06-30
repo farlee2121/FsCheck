@@ -31,15 +31,15 @@ module ArbMap =
     
     /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
     let mergeFactory (factory: unit -> Arbitrary<'b>) (existingMap: IArbMap) = 
-        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+        (existingMap :?> ArbMap).MergeFactory(Func<unit,Arbitrary<'b>>(factory)) :> IArbMap
 
     /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
     let mergeArbFactory (factory: Arbitrary<'a> -> Arbitrary<'b>) (existingMap: IArbMap) = 
-        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+        (existingMap :?> ArbMap).MergeFactory(Func<Arbitrary<'a>,Arbitrary<'b>>(factory)) :> IArbMap
 
     /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
     let mergeMapFactory (factory: IArbMap -> Arbitrary<'b>) (existingMap: IArbMap) = 
-        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+        (existingMap :?> ArbMap).MergeFactory(Func<IArbMap,Arbitrary<'b>>(factory)) :> IArbMap
 
     /// Return a new Type to Arbitrary map that merges the existing map with the provided Arbitrary<'T> instance.
     let mergeArb (arb: Arbitrary<'a>) (existingMap: IArbMap) = 
