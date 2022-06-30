@@ -212,6 +212,8 @@ module internal TypeClass =
             let newTC = this.Discover<'T>(onlyPublic, instance)
             this.Merge(newTC)
 
+        /// Merge a single instance factory with the existing TypeClass, overriding existing instances on this TypeClass
+        /// Factory must return an instance of the given TypeClass.
         member this.MergeFactory(factory: Func<'a,'b>) =
             match box factory with
             | :? Func<unit, 'b> as f -> 

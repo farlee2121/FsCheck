@@ -14,6 +14,16 @@ module ArbMap =
     /// discovered on the given Type. See mergeWith<'TArb> for more info on what the shape of instancesType can be.
     let mergeWithType (instancesType: Type) (existingMap: IArbMap) =
         ArbMap(instancesType, existingMap :?> ArbMap) :> IArbMap
+    
+    /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
+    /// See mergeWith<'TArb> for more info on what the shape of instancesType can be.
+    let mergeArbFactory (factory: 'a -> 'b) (existingMap: IArbMap) = 
+        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+
+    /// Return a new Type to Arbitrary map that merges the existing map with the provided Arbitrary<'T> instance.
+    /// See mergeWith<'TArb> for more info on what the shape of instancesType can be.
+    let mergeArb (arb: Arbitrary<'a>) (existingMap: IArbMap) = 
+         (existingMap :?> ArbMap).MergeFactory(fun () -> arb) :> IArbMap
 
     /// Return a new Type to Arbitrary map that merges the existing map with new Arbitrary<'T> instances
     /// discovered on the given type argument 'TArb.
