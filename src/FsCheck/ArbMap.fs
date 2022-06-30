@@ -42,8 +42,11 @@ type internal ArbMap private (init: ArbMapInit) as this=
     // for testing purposes
     member internal _.MemoizedInstances = finder.MemoizedInstances
 
-    member internal _.MergeFactory(factory: Func<'a,'b>) =
+    member internal _.MergeFactory(factory: Func<'a,Arbitrary<'b>>) =
         ArbMap(FromTypeClass (finder.MergeFactory(factory)) )
+
+    member internal _.MergeFactory(target: obj, method: System.Reflection.MethodInfo) =
+        ArbMap(FromTypeClass (finder.MergeFactory(target,method))) 
 
     interface IArbMap with
         member _.ArbFor t =

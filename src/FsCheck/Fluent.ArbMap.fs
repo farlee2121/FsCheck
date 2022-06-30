@@ -18,4 +18,15 @@ type ArbMap private () =
     static member Merge(map: IArbMap, instancesType: Type) = ArbMap.mergeWithType instancesType map
 
     [<Extension>]
+    static member MergeArb<'T>(map: IArbMap, arb:Arbitrary<'T>) = ArbMap.mergeArb arb map
+
+    [<Extension>]
+    static member MergeArbFactory<'T, 'U>(map: IArbMap, factory:Func<'T,Arbitrary<'U>>) = 
+        (map :?> FsCheck.ArbMap).MergeFactory(factory) :> IArbMap
+
+    [<Extension>]
+    static member MergeArbFactory<'T>(map: IArbMap, factory:Func<Arbitrary<'T>>) = 
+        (map :?> FsCheck.ArbMap).MergeFactory(factory.Target, factory.Method) :> IArbMap
+
+    [<Extension>]
     static member GeneratorFor<'T>(map: IArbMap) = ArbMap.generate<'T> map 

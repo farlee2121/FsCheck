@@ -218,10 +218,11 @@ module internal TypeClass =
             match box factory with
             | :? Func<unit, 'b> as f -> 
                 let factory = Func<'b>(f.Invoke)
-                this.MergeFactory({Method = factory.Method; Target = factory.Target })
-            | _ -> this.MergeFactory({Method = factory.Method; Target = factory.Target }) 
+                this.MergeFactory(factory.Target, factory.Method)
+            | _ -> this.MergeFactory(factory.Target, factory.Method) 
 
-        member internal this.MergeFactory(factory: InvocationData) = 
+        member internal this.MergeFactory(target: obj, method: MethodInfo) = 
+            let factory = { Target = target; Method = method}
             let toRegistryPair' (inv: InvocationData) =
                 match toRegistryPair this.Class inv with
                 | Some registration -> registration
