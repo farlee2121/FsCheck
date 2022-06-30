@@ -15,16 +15,6 @@ module ArbMap =
     let mergeWithType (instancesType: Type) (existingMap: IArbMap) =
         ArbMap(instancesType, existingMap :?> ArbMap) :> IArbMap
     
-    /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
-    /// See mergeWith<'TArb> for more info on what the shape of instancesType can be.
-    let mergeArbFactory (factory: 'a -> Arbitrary<'b>) (existingMap: IArbMap) = 
-        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
-
-    /// Return a new Type to Arbitrary map that merges the existing map with the provided Arbitrary<'T> instance.
-    /// See mergeWith<'TArb> for more info on what the shape of instancesType can be.
-    let mergeArb (arb: Arbitrary<'a>) (existingMap: IArbMap) = 
-         (existingMap :?> ArbMap).MergeFactory(fun () -> arb) :> IArbMap
-
     /// Return a new Type to Arbitrary map that merges the existing map with new Arbitrary<'T> instances
     /// discovered on the given type argument 'TArb.
     /// The new Arbitrary instances take precedence over the ones for the same type
@@ -38,6 +28,22 @@ module ArbMap =
     /// parameters of type Arbitrary<'T> to obtain them. Arbitrary instance of the correct type are automatically
     /// injected on construction of a particular type.
     let mergeWith<'TArb> (existingMap: IArbMap) = mergeWithType typeof<'TArb> existingMap
+    
+    /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
+    let mergeFactory (factory: unit -> Arbitrary<'b>) (existingMap: IArbMap) = 
+        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+
+    /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
+    let mergeArbFactory (factory: Arbitrary<'a> -> Arbitrary<'b>) (existingMap: IArbMap) = 
+        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+
+    /// Return a new Type to Arbitrary map that merges the existing map with the Arbitrary<'T> returned by the given function.
+    let mergeMapFactory (factory: IArbMap -> Arbitrary<'b>) (existingMap: IArbMap) = 
+        (existingMap :?> ArbMap).MergeFactory(factory) :> IArbMap
+
+    /// Return a new Type to Arbitrary map that merges the existing map with the provided Arbitrary<'T> instance.
+    let mergeArb (arb: Arbitrary<'a>) (existingMap: IArbMap) = 
+         (existingMap :?> ArbMap).MergeFactory(fun () -> arb) :> IArbMap 
  
 
     let arbitrary<'T> (arbMap:IArbMap) = arbMap.ArbFor<'T>()
