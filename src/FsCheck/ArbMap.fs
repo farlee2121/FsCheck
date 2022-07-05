@@ -1,4 +1,4 @@
-﻿namespace rec FsCheck
+﻿namespace FsCheck
 
 open System
 
@@ -11,48 +11,44 @@ type IArbMap =
     abstract ArbFor: Type -> Arbitrary<obj>
     abstract ArbFor<'T> : unit -> Arbitrary<'T>
 
-type private ArbMapInit = 
-| FromTypeClass of TypeClass.TypeClass<Arbitrary<obj>>
-| FromDiscover of (Type * ArbMap option)
-
 // Note: the only implementation of IArbMap. The main reason this type is
 // not exposed directly, is because that gives annoying type name clashes
 // between the ArbMap type, the ArbMap module (which can be addressed with ModuleSuffix),
 // and the ArbMap extension type in FsCheck.Fluent.
-type internal ArbMap private (init: ArbMapInit) as this=
+type internal ArbMap =
     
-    let finder = 
-        match init with
-        | FromTypeClass tc -> tc.Merge(TypeClass.TypeClass(injectedConfigs = [| this |]))
-        | FromDiscover (typ, existingMap) -> 
-            let finder =
-                match existingMap with
-                | None ->
-                    TypeClass.TypeClass<Arbitrary<obj>>
-                        .New(injectParameters = true)
-                | Some arbFinder -> arbFinder.ArbFinder
+    val finder : TypeClass.TypeClass<Arbitrary<obj>>
             
-            finder.DiscoverAndMerge(onlyPublic = false, instancesType = typ, newInjectedConfigs = [| this |])
+    member private this.ArbFinder = this.finder
 
-    member private _.ArbFinder = finder
+    internal new (typ:Type, ?existingMap:ArbMap) as this = 
+        let finder =
+            match existingMap with
+            | None ->
+                TypeClass.TypeClass<Arbitrary<obj>>
+                    .New(injectParameters = true)
+            | Some arbFinder -> arbFinder.ArbFinder
+            
+        let merged = finder.DiscoverAndMerge(onlyPublic = false, instancesType = typ, newInjectedConfigs = [| this |])
+        {finder = merged}
 
-    internal new (typ:Type, ?existingMap:ArbMap) = 
-        ArbMap(FromDiscover (typ, existingMap))
+    internal new (tc: TypeClass.TypeClass<Arbitrary<obj>>) as this=
+        {finder = tc.Merge(TypeClass.TypeClass(injectedConfigs = [| this |]))}
 
     // for testing purposes
-    member internal _.MemoizedInstances = finder.MemoizedInstances
+    member internal this.MemoizedInstances = this.finder.MemoizedInstances
 
-    member internal _.MergeFactory(factory: Func<'a,Arbitrary<'b>>) =
-        ArbMap(FromTypeClass (finder.MergeFactory(factory)) )
+    member internal this.MergeFactory(factory: Func<'a,Arbitrary<'b>>) =
+        ArbMap(this.finder.MergeFactory(factory)) 
 
-    member internal _.MergeFactory(target: obj, method: System.Reflection.MethodInfo) =
-        ArbMap(FromTypeClass (finder.MergeFactory(target,method))) 
+    member internal this.MergeFactory(target: obj, method: System.Reflection.MethodInfo) =
+        ArbMap(this.finder.MergeFactory(target,method))
 
     interface IArbMap with
-        member _.ArbFor t =
-            finder.GetInstance t
+        member this.ArbFor t =
+            this.finder.GetInstance t
             |> unbox<IArbitrary>
             |> (fun arb -> Arb.fromGenShrink (arb.GeneratorObj, arb.ShrinkerObj))
 
-        member _.ArbFor<'TArb>() =
-            finder.InstanceFor<'TArb, Arbitrary<'TArb>>()
+        member this.ArbFor<'TArb>() =
+            this.finder.InstanceFor<'TArb, Arbitrary<'TArb>>()
