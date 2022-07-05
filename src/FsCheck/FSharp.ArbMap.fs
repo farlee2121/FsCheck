@@ -14,7 +14,7 @@ module ArbMap =
     /// discovered on the given Type. See mergeWith<'TArb> for more info on what the shape of instancesType can be.
     let mergeWithType (instancesType: Type) (existingMap: IArbMap) =
         ArbMap(instancesType, existingMap :?> ArbMap) :> IArbMap
-    
+
     /// Return a new Type to Arbitrary map that merges the existing map with new Arbitrary<'T> instances
     /// discovered on the given type argument 'TArb.
     /// The new Arbitrary instances take precedence over the ones for the same type
